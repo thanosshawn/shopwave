@@ -8,39 +8,67 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2, Shield, LayoutDashboard, Package, Users, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { useToast } from '@/hooks/use-toast'; // Import useToast
+import { useToast } from '@/hooks/use-toast';
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading } = useAuth();
   const router = useRouter();
-  const { toast } = useToast(); // Get toast function from the hook
+  const { toast } = useToast();
+
+  console.log('[AdminLayout] Auth State:', { loading, userId: user?.uid, isAdmin });
 
   useEffect(() => {
+    console.log('[AdminLayout Effect] Running effect. Auth State:', { loading, userId: user?.uid, isAdmin });
     if (!loading) {
       if (!user) {
+        console.log('[AdminLayout Effect] No user, redirecting to login.');
         router.replace('/login?redirect=/admin');
       } else if (!isAdmin) {
-        // User is logged in but not an admin
+        console.log('[AdminLayout Effect] User is not admin, redirecting to home.');
         toast({
           title: "Access Denied",
           description: "You do not have permission to access the admin panel.",
           variant: "destructive",
         });
-        router.replace('/'); 
+        router.replace('/');
+      } else {
+        console.log('[AdminLayout Effect] User is admin, proceeding.');
       }
     }
-  }, [user, isAdmin, loading, router, toast]); // Add toast to dependency array
+  }, [user, isAdmin, loading, router, toast]);
 
-  if (loading || !user || (user && !isAdmin && !loading) ) {
-    // Show loader while checking auth or if user is not an admin (before redirect kicks in)
+  if (loading) {
+    console.log('[AdminLayout] Rendering loader: Auth loading.');
     return (
       <div className="flex items-center justify-center min-h-screen bg-background">
         <Loader2 className="h-12 w-12 animate-spin text-primary" />
-        <p className="ml-4 text-lg text-muted-foreground">Verifying access...</p>
+        <p className="ml-4 text-lg text-muted-foreground">Verifying access (auth loading)...</p>
       </div>
     );
   }
-  
+
+  if (!user) {
+    console.log('[AdminLayout] Rendering loader: No user (should be redirected by effect).');
+     return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg text-muted-foreground">Verifying access (no user)...</p>
+      </div>
+    );
+  }
+
+  if (!isAdmin) {
+    console.log('[AdminLayout] Rendering loader: User not admin (should be redirected by effect).');
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+        <p className="ml-4 text-lg text-muted-foreground">Verifying access (not admin)...</p>
+      </div>
+    );
+  }
+
+  // If we reach here, user is authenticated and is an admin
+  console.log('[AdminLayout] Rendering Admin Panel UI.');
   return (
     <div className="flex min-h-screen bg-muted/40">
       <aside className="w-64 bg-background border-r p-4 flex flex-col gap-4">
