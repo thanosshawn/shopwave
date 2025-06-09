@@ -3,7 +3,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import type { Product } from '@/lib/types';
+import type { PlainProduct } from '@/lib/utils'; // Updated to PlainProduct
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/use-cart';
 import { Input } from '@/components/ui/input';
@@ -12,9 +12,10 @@ import { Minus, Plus, ShoppingCart } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useToast } from '@/hooks/use-toast';
+import type { Product } from '@/lib/types'; // Keep Product for addToCart if its signature expects original Product
 
 interface ProductDetailClientInteractionsProps {
-  product: Product;
+  product: PlainProduct; // Changed to PlainProduct
   productImages: string[];
 }
 
@@ -26,8 +27,10 @@ export default function ProductDetailClientInteractions({ product, productImages
 
   const handleAddToCart = async () => {
     try {
-      await addToCart(product, quantity);
-      // Toast is handled by addToCart in CartProvider
+      // useCart's addToCart might expect the original Product type with Timestamps if it interacts with Firestore directly.
+      // For now, we cast. If addToCart in useCart also needs plain objects, that needs adjustment too.
+      // However, addToCart in CartProvider seems to re-construct CartItem which doesn't have timestamps.
+      await addToCart(product as unknown as Product, quantity);
     } catch (error) {
       console.error("Failed to add to cart:", error);
       toast({

@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/use-auth';
 import { useRouter } from 'next/navigation';
 import { getUserOrders } from '@/lib/firebase/services';
 import type { Order } from '@/lib/types';
+import { makeOrderPlain, type PlainOrder } from '@/lib/utils'; // Import serialization utils
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
@@ -14,11 +15,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { format } from 'date-fns';
 
-
 function OrdersPageContent() {
   const { user, loading: authLoading } = useAuth();
   const router = useRouter();
-  const [orders, setOrders] = useState<Order[]>([]);
+  const [orders, setOrders] = useState<PlainOrder[]>([]); // Use PlainOrder
   const [isLoadingOrders, setIsLoadingOrders] = useState(true);
   const [isClient, setIsClient] = useState(false);
 
@@ -34,11 +34,12 @@ function OrdersPageContent() {
         setIsLoadingOrders(true);
         getUserOrders(user.uid)
           .then(userOrders => {
-            setOrders(userOrders);
+            // Serialize orders before setting state
+            const plainUserOrders = userOrders.map(o => makeOrderPlain(o as Order)).filter(o => o !== null) as PlainOrder[];
+            setOrders(plainUserOrders);
           })
           .catch(error => {
             console.error("Error fetching orders:", error);
-            // Potentially show a toast message
           })
           .finally(() => {
             setIsLoadingOrders(false);
@@ -80,7 +81,8 @@ function OrdersPageContent() {
                 <div>
                   <CardTitle className="text-xl">Order #{order.id?.substring(0, 8)}...</CardTitle>
                   <CardDescription>
-                    Placed on: {order.createdAt ? format(order.createdAt.toDate(), 'PPP') : 'N/A'}
+                    {/* Ensure createdAt is a string before formatting */}
+                    Placed on: {order.createdAt ? format(new Date(order.createdAt), 'PPP') : 'N/A'}
                   </CardDescription>
                 </div>
                 <div className="text-right">
@@ -122,9 +124,6 @@ function OrdersPageContent() {
                     <p>{order.shippingAddress.country}</p>
                  </div>
               </CardContent>
-              {/* <CardFooter>
-                 <Button variant="outline" size="sm">View Order Details</Button>
-              </CardFooter> */}
             </Card>
           ))}
         </div>
@@ -132,7 +131,6 @@ function OrdersPageContent() {
     </div>
   );
 }
-
 
 export default function OrdersPage() {
   return (

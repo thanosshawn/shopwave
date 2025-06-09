@@ -3,16 +3,23 @@ import { getProductById } from "@/lib/firebase/services";
 import { ProductForm } from "@/components/admin/product-form";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { notFound } from "next/navigation";
+import { makeProductPlain, type PlainProduct } from "@/lib/utils"; // Import serialization utils
 
 interface EditProductPageProps {
   params: { id: string };
 }
 
 export default async function EditProductPage({ params }: EditProductPageProps) {
-  const product = await getProductById(params.id);
+  const productData = await getProductById(params.id);
 
-  if (!product) {
-    notFound(); // Or redirect to a "product not found" page within admin
+  if (!productData) {
+    notFound(); 
+  }
+
+  const plainProduct = makeProductPlain(productData) as PlainProduct;
+
+  if (!plainProduct) {
+      notFound();
   }
 
   return (
@@ -20,10 +27,11 @@ export default async function EditProductPage({ params }: EditProductPageProps) 
       <Card className="shadow-xl">
         <CardHeader>
           <CardTitle className="text-2xl font-headline">Edit Product</CardTitle>
-          <CardDescription>Update the details for "{product.name}".</CardDescription>
+          <CardDescription>Update the details for "{plainProduct.name}".</CardDescription>
         </CardHeader>
         <CardContent>
-          <ProductForm initialData={product} productId={params.id} />
+          {/* Pass the plain product to the form */}
+          <ProductForm initialData={plainProduct} productId={params.id} />
         </CardContent>
       </Card>
     </div>

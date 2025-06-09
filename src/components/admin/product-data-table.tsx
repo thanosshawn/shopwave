@@ -35,17 +35,19 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { ChevronDown } from "lucide-react"
+import type { PlainProduct } from "@/lib/utils"; // Import PlainProduct
 
-interface DataTableProps<TData, TValue> {
+// TData is now PlainProduct
+interface DataTableProps<TData extends PlainProduct, TValue> {
   columns: ColumnDef<TData, TValue>[]
   data: TData[]
   refreshData: () => void
 }
 
-export function ProductDataTable<TData, TValue>({
+export function ProductDataTable<TData extends PlainProduct, TValue>({
   columns,
   data,
-  refreshData, // Added to props
+  refreshData, 
 }: DataTableProps<TData, TValue>) {
   const [sorting, setSorting] = React.useState<SortingState>([])
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>([])
@@ -69,7 +71,7 @@ export function ProductDataTable<TData, TValue>({
       columnVisibility,
       rowSelection,
     },
-    meta: { // Pass refreshData to table meta to be accessible in columns
+    meta: { 
       refreshData,
     },
   })

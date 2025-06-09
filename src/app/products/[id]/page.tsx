@@ -7,19 +7,26 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import ProductDetailClientInteractions from './product-detail-client-interactions'; // New client component
+import { makeProductPlain, type PlainProduct } from '@/lib/utils';
 
 interface ProductDetailsPageProps {
   params: { id: string };
 }
 
 export default async function ProductDetailsPage({ params }: ProductDetailsPageProps) {
-  const product = await getProductById(params.id);
+  const productData = await getProductById(params.id);
 
-  if (!product) {
+  if (!productData) {
     notFound(); // Triggers the not-found.js or default Next.js 404 page
   }
   
-  const productImages = [product.imageUrl, ...(product.images || [])];
+  const plainProduct = makeProductPlain(productData) as PlainProduct; // Cast because we know productData exists here
+
+  if (!plainProduct) {
+    notFound(); // Should not happen if productData exists, but good for type safety
+  }
+
+  const productImages = [plainProduct.imageUrl, ...(plainProduct.images || [])];
 
   return (
     <div className="max-w-5xl mx-auto">
@@ -28,7 +35,7 @@ export default async function ProductDetailsPage({ params }: ProductDetailsPageP
           <ArrowLeft className="mr-2 h-4 w-4" /> Back to Products
         </Link>
       </Button>
-      <ProductDetailClientInteractions product={product} productImages={productImages} />
+      <ProductDetailClientInteractions product={plainProduct} productImages={productImages} />
     </div>
   );
 }

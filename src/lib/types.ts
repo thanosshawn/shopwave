@@ -13,6 +13,14 @@ export interface Product {
   featured?: boolean;
   stock?: number;
   condition?: 'new' | 'used'; // Added condition field
+  createdAt?: Timestamp; // Added from Firestore
+  updatedAt?: Timestamp; // Added from Firestore
+}
+
+// For passing to client components, Timestamps should be serialized
+export interface PlainProduct extends Omit<Product, 'createdAt' | 'updatedAt'> {
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface CartItem {
@@ -75,4 +83,9 @@ export interface Order {
   };
   createdAt: Timestamp;
   status: 'pending' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+}
+
+// For passing Order to client components
+export interface PlainOrder extends Omit<Order, 'createdAt'> {
+  createdAt?: string;
 }

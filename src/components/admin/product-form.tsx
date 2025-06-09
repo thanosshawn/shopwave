@@ -26,11 +26,13 @@ import {
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
-import type { Product } from "@/lib/types";
+import type { Product } from "@/lib/types"; // Original Product type for payload
+import type { PlainProduct } from "@/lib/utils"; // PlainProduct for props
 import { createProduct, updateProduct } from "@/lib/firebase/services";
 import { Loader2 } from "lucide-react";
 import { useState } from "react";
 
+// Form schema uses fields that are directly editable, not including createdAt/updatedAt
 const productFormSchema = z.object({
   name: z.string().min(3, "Name must be at least 3 characters"),
   description: z.string().min(10, "Description must be at least 10 characters"),
@@ -57,7 +59,7 @@ const productFormSchema = z.object({
 export type ProductFormData = z.infer<typeof productFormSchema>;
 
 interface ProductFormProps {
-  initialData?: Product | null;
+  initialData?: PlainProduct | null; // Expect PlainProduct for initialData
   productId?: string | null; // For editing
 }
 
@@ -67,8 +69,8 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const [isSaving, setIsSaving] = useState(false);
 
   const defaultValues = initialData ? {
-    ...initialData,
-    images: initialData.images?.join(', ') || '', // Convert array to comma-separated string
+    ...initialData, // Spread plain product data
+    images: initialData.images?.join(', ') || '', 
     condition: initialData.condition || 'new',
   } : {
     name: "",
@@ -90,19 +92,28 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   async function onSubmit(data: ProductFormData) {
     setIsSaving(true);
     try {
-      const productPayload = {
-        ...data,
-        condition: data.condition || 'new', // Ensure condition has a default
+      // The payload for createProduct/updateProduct expects specific fields, not full Product/PlainProduct
+      const productPayload: Omit<Product, 'id' | 'name_lowercase' | 'images' | 'createdAt' | 'updatedAt'> & { images?: string } = {
+        name: data.name,
+        description: data.description,
+        price: data.price,
+        imageUrl: data.imageUrl,
+        category: data.category,
+        featured: data.featured,
+        stock: data.stock,
+        condition: data.condition || 'new',
+        images: data.images, // Pass as string, services will handle splitting
       };
-      if (productId && initialData) { // Editing existing product
+
+      if (productId && initialData) { 
         await updateProduct(productId, productPayload);
         toast({ title: "Product Updated", description: `"${data.name}" has been successfully updated.` });
-      } else { // Creating new product
+      } else { 
         await createProduct(productPayload);
         toast({ title: "Product Created", description: `"${data.name}" has been successfully created.` });
       }
-      router.push("/admin/products"); // Redirect to products list
-      router.refresh(); // Refresh server components
+      router.push("/admin/products"); 
+      router.refresh(); 
     } catch (error) {
       console.error("Error saving product:", error);
       toast({

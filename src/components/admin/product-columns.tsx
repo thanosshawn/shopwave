@@ -26,10 +26,10 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog"
-import type { Product } from "@/lib/types"
+import type { PlainProduct } from "@/lib/utils" // Updated to PlainProduct
 import { deleteProduct } from "@/lib/firebase/services"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation" // Import useRouter
+import { useRouter } from "next/navigation" 
 
 const ProductImageCell = ({ row }: { row: any }) => {
   const imageUrl = row.getValue("imageUrl") as string;
@@ -47,13 +47,12 @@ const ProductImageCell = ({ row }: { row: any }) => {
   );
 };
 
-
-export const getProductColumns = (): ColumnDef<Product>[] => {
+// Columns are now defined for PlainProduct
+export const getProductColumns = (): ColumnDef<PlainProduct>[] => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { toast } = useToast();
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const router = useRouter();
-
 
   const handleDelete = async (productId: string, productName: string) => {
     try {
@@ -62,7 +61,7 @@ export const getProductColumns = (): ColumnDef<Product>[] => {
         title: "Product Deleted",
         description: `"${productName}" has been successfully deleted.`,
       });
-      router.refresh(); // Use router.refresh() here
+      router.refresh(); 
     } catch (error) {
       console.error("Error deleting product:", error);
       toast({
@@ -151,7 +150,7 @@ export const getProductColumns = (): ColumnDef<Product>[] => {
     {
       id: "actions",
       cell: ({ row }) => {
-        const product = row.original;
+        const product = row.original; // product is now PlainProduct
         return (
           <AlertDialog>
             <DropdownMenu>
@@ -164,6 +163,7 @@ export const getProductColumns = (): ColumnDef<Product>[] => {
               <DropdownMenuContent align="end">
                 <DropdownMenuLabel>Actions</DropdownMenuLabel>
                 <DropdownMenuItem asChild>
+                  {/* product.id should still be string and work */}
                   <Link href={`/admin/products/edit/${product.id}`}>
                     <Pencil className="mr-2 h-4 w-4" /> Edit
                   </Link>
@@ -200,4 +200,3 @@ export const getProductColumns = (): ColumnDef<Product>[] => {
     },
   ];
 };
-

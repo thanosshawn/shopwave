@@ -1,13 +1,13 @@
 
 "use client";
 
-import type { Product } from "@/lib/types";
+import type { PlainProduct } from "@/lib/utils"; // Updated to PlainProduct
 import { ProductDataTable } from "@/components/admin/product-data-table";
 import { getProductColumns } from "@/components/admin/product-columns";
 import { useRouter } from "next/navigation";
 
 interface AdminProductsClientTableProps {
-  products: Product[];
+  products: PlainProduct[]; // Expect PlainProduct
 }
 
 export function AdminProductsClientTable({ products }: AdminProductsClientTableProps) {
@@ -17,7 +17,6 @@ export function AdminProductsClientTable({ products }: AdminProductsClientTableP
     router.refresh();
   };
 
-  // getProductColumns now uses its own router and toast instances due to "use client" in its file.
   const columns = getProductColumns(); 
 
   return (
