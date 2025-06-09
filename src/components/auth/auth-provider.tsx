@@ -9,8 +9,7 @@ import { auth } from '@/lib/firebase/config';
 import { useToast } from '@/hooks/use-toast';
 import { useRouter } from 'next/navigation';
 import { Skeleton } from '@/components/ui/skeleton';
-import type { AuthContextType } from '@/lib/types'; // Import updated type
-
+import type { AuthContextType } from '@/lib/types'; 
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
@@ -23,26 +22,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      console.log('[AuthProvider] onAuthStateChanged triggered. currentUser UID:', currentUser?.uid || 'No user');
       setUser(currentUser);
       if (currentUser) {
         try {
+          // It's good practice to force token refresh if checking claims immediately after login or when claims might have changed.
+          // However, for initial load, a non-forced refresh is usually okay if user recently logged in.
+          // Forcing refresh: const idTokenResult = await getIdTokenResult(currentUser, true);
           const idTokenResult = await getIdTokenResult(currentUser);
+          console.log('[AuthProvider] User claims:', idTokenResult.claims);
           setIsAdmin(idTokenResult.claims.isAdmin === true);
         } catch (error) {
-          console.error("Error getting ID token result:", error);
+          console.error("[AuthProvider] Error getting ID token result:", error);
           setIsAdmin(false); // Default to not admin on error
         }
       } else {
         setIsAdmin(false);
       }
+      console.log('[AuthProvider] Setting loading to false. User:', currentUser?.uid, 'IsAdmin:', isAdmin);
       setLoading(false);
     });
     return () => unsubscribe();
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []); // isAdmin is derived state, not a dependency here.
 
   const logout = async () => {
     setLoading(true);
-    setIsAdmin(false); // Reset admin status on logout
+    setIsAdmin(false); 
     try {
       await firebaseSignOut(auth);
       toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
@@ -55,7 +61,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  if (loading) {
+  if (loading && typeof window !== 'undefined') { // Added typeof window !== 'undefined' to prevent SSR rendering of skeleton if not needed
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
         <Skeleton className="h-12 w-12 rounded-full bg-primary/20 mb-4" />
