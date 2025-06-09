@@ -15,7 +15,7 @@ export const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
 // !!! IMPORTANT: Change this to your desired admin email address !!!
 // For better security in a real application, this should come from an environment variable.
-const ADMIN_EMAIL = "admin@example.com";
+const ADMIN_EMAIL = "thanosshawn@gmail.com";
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
