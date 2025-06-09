@@ -19,19 +19,27 @@ import {
 import { updateProfile as updateFirebaseUserProfile } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
 import { db, auth } from './config';
-import type { Product, CartItem, UserProfile, Order, OrderItem } from '@/lib/types';
+import type { Product, CartItem, UserProfile, Order } from '@/lib/types';
 
 // Product Services
 export async function getProducts(filters?: { featured?: boolean; category?: string }, count?: number): Promise<Product[]> {
   const productsCol = collection(db, 'products');
-  let q = query(productsCol, orderBy('name')); // Default sort
+  let q = query(productsCol); 
 
-  if (filters?.featured) {
-    q = query(q, where('featured', '==', true));
+  const conditions = [];
+  if (filters?.featured !== undefined) {
+    conditions.push(where('featured', '==', filters.featured));
   }
   if (filters?.category) {
-    q = query(q, where('category', '==', filters.category));
+    conditions.push(where('category', '==', filters.category));
   }
+  
+  // Apply orderBy name after all filters
+  // Note: If you filter by inequality on one field and order by another, you might need a composite index.
+  // For simplicity, we'll order by name. If `featured` is used, this query may require an index on `featured` and `name`.
+  q = query(productsCol, ...conditions, orderBy('name'));
+
+
   if (count) {
     q = query(q, limit(count));
   }
@@ -49,19 +57,53 @@ export async function getProductById(id: string): Promise<Product | null> {
   return null;
 }
 
+export async function createProduct(productData: Omit<Product, 'id' | 'name_lowercase' | 'images'> & { images?: string }): Promise<string> {
+  const productsCol = collection(db, 'products');
+  const parsedImages = productData.images ? productData.images.split(',').map(url => url.trim()).filter(url => url) : [];
+  const newProductRef = await addDoc(productsCol, {
+    ...productData,
+    images: parsedImages,
+    name_lowercase: productData.name.toLowerCase(),
+    createdAt: serverTimestamp(), 
+    updatedAt: serverTimestamp(),
+  });
+  return newProductRef.id;
+}
+
+export async function updateProduct(productId: string, productData: Partial<Omit<Product, 'id' | 'name_lowercase' | 'images'>> & { images?: string }): Promise<void> {
+  const productDocRef = doc(db, 'products', productId);
+  const updateData: Partial<Product> & { updatedAt: Timestamp, images?: string[], name_lowercase?: string } = {
+    ...productData,
+    updatedAt: serverTimestamp() as Timestamp,
+  };
+  if (productData.name) {
+    updateData.name_lowercase = productData.name.toLowerCase();
+  }
+  if (productData.images && typeof productData.images === 'string') {
+    updateData.images = productData.images.split(',').map(url => url.trim()).filter(url => url);
+  } else if (productData.images === undefined) { // Handle explicitly clearing images
+    updateData.images = [];
+  }
+
+  await updateDoc(productDocRef, updateData);
+}
+
+export async function deleteProduct(productId: string): Promise<void> {
+  const productDocRef = doc(db, 'products', productId);
+  await deleteDoc(productDocRef);
+}
+
+
 export async function searchProducts(searchTerm: string): Promise<Product[]> {
   if (!searchTerm.trim()) return [];
   const productsCol = collection(db, 'products');
-  // Firestore doesn't support case-insensitive 'contains' queries well.
-  // This is a prefix search. For better search, use a dedicated search service
-  // or store a lowercase version of the name (e.g., name_lowercase).
   const searchTermLower = searchTerm.toLowerCase();
   const q = query(
     productsCol,
     where('name_lowercase', '>=', searchTermLower),
-    where('name_lowercase', '<=', searchTermLower + '\uf8ff'), // \uf8ff is a very high code point character
+    where('name_lowercase', '<=', searchTermLower + '\uf8ff'),
     orderBy('name_lowercase'),
-    limit(20) // Limit search results
+    limit(20)
   );
 
   const productSnapshot = await getDocs(q);
@@ -81,7 +123,6 @@ export async function getUserProfile(userId: string): Promise<UserProfile | null
 
 export async function updateUserProfile(userId: string, data: Partial<UserProfile>): Promise<void> {
   const userDocRef = doc(db, 'users', userId);
-  // If updating Firebase Auth display name or photoURL
   if (auth.currentUser && (data.displayName !== undefined || data.photoURL !== undefined) ) {
     await updateFirebaseUserProfile(auth.currentUser, {
       displayName: data.displayName,
@@ -100,7 +141,7 @@ export async function createUserProfile(user: FirebaseUser, additionalData: Part
     photoURL: user.photoURL,
     ...additionalData,
   };
-  await setDoc(userDocRef, profileData, { merge: true }); // merge true to avoid overwriting if called multiple times
+  await setDoc(userDocRef, profileData, { merge: true }); 
 }
 
 
@@ -112,7 +153,7 @@ export async function getUserCart(userId: string): Promise<CartItem[]> {
 }
 
 export async function addOrUpdateCartItem(userId: string, item: CartItem): Promise<void> {
-  const cartItemRef = doc(db, 'users', userId, 'cart', item.id); // Use product ID as cart item ID
+  const cartItemRef = doc(db, 'users', userId, 'cart', item.id); 
   await setDoc(cartItemRef, item, { merge: true });
 }
 
@@ -139,10 +180,8 @@ export async function mergeLocalCartToFirestore(userId: string, localCartItems: 
     const firestoreItem = firestoreCart.find(item => item.id === localItem.id);
     const cartItemRef = doc(db, 'users', userId, 'cart', localItem.id);
     if (firestoreItem) {
-      // Item exists, update quantity (e.g., sum or choose one strategy)
       batch.update(cartItemRef, { quantity: firestoreItem.quantity + localItem.quantity });
     } else {
-      // Item does not exist, add it
       batch.set(cartItemRef, localItem);
     }
   }
@@ -155,7 +194,7 @@ export async function createOrder(userId: string, orderData: Omit<Order, 'id' | 
   const newOrderRef = await addDoc(ordersCol, {
     ...orderData,
     userId,
-    createdAt: serverTimestamp() as Timestamp, // Use serverTimestamp
+    createdAt: serverTimestamp() as Timestamp, 
   });
   return newOrderRef.id;
 }
@@ -165,4 +204,12 @@ export async function getUserOrders(userId: string): Promise<Order[]> {
   const q = query(ordersCol, where('userId', '==', userId), orderBy('createdAt', 'desc'));
   const orderSnapshot = await getDocs(q);
   return orderSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+}
+
+// Admin - Product Management (specific example)
+export async function getAllProductsAdmin(): Promise<Product[]> {
+  const productsCol = collection(db, 'products');
+  const q = query(productsCol, orderBy('name'));
+  const productSnapshot = await getDocs(q);
+  return productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }

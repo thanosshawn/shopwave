@@ -8,7 +8,7 @@ export interface Product {
   description: string;
   price: number;
   imageUrl: string;
-  images?: string[];
+  images?: string[]; // Array of image URLs
   category: string;
   featured?: boolean;
   stock?: number;
@@ -22,12 +22,19 @@ export interface CartItem {
   quantity: number;
 }
 
+export interface AuthContextType {
+  user: import('firebase/auth').User | null;
+  isAdmin?: boolean; // Added for admin check
+  loading: boolean;
+  logout: () => Promise<void>;
+}
+
 export interface CartContextType {
   cartItems: CartItem[];
-  addToCart: (product: Product, quantity?: number) => Promise<void>; // Made async
-  removeFromCart: (productId: string) => Promise<void>; // Made async
-  updateQuantity: (productId: string, newQuantity: number) => Promise<void>; // Made async
-  clearCart: () => Promise<void>; // Made async
+  addToCart: (product: Product, quantity?: number) => Promise<void>;
+  removeFromCart: (productId: string) => Promise<void>;
+  updateQuantity: (productId: string, newQuantity: number) => Promise<void>;
+  clearCart: () => Promise<void>;
   getCartTotal: () => number;
   getCartItemCount: () => number;
   loadingCart: boolean;
@@ -38,7 +45,6 @@ export interface UserProfile {
   email: string | null;
   displayName: string | null;
   photoURL?: string | null;
-  // Add any other profile fields you want to store in Firestore
   address?: string;
   city?: string;
   postalCode?: string;

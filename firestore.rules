@@ -1,35 +1,35 @@
 
 rules_version = '2';
+
 service cloud.firestore {
   match /databases/{database}/documents {
 
-    // Products: Publicly readable. 
-    // Write access is restricted (e.g., for admins or a backend service).
-    // For easier prototyping, you might temporarily set write to `if request.auth != null;`
-    // if you plan to add products via client-side scripts during development.
+    // Products: Public read, admin write
     match /products/{productId} {
       allow read: if true;
-      allow write: if false; // Or use a more specific admin check like:
-                             // request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+      allow create, update, delete: if request.auth != null && request.auth.token.isAdmin == true;
     }
 
-    // User-specific data
+    // Users: Profile data can be read by anyone (if needed for public profiles),
+    // but only the authenticated user can write to their own profile.
+    // Admins can potentially write to any user profile (use with caution).
     match /users/{userId} {
-      // User can read and write their own profile document
-      allow read, write: if request.auth != null && request.auth.uid == userId;
+      allow read: if true; // Or more restrictive: if request.auth != null;
+      allow write: if request.auth != null && (request.auth.uid == userId || request.auth.token.isAdmin == true);
 
-      // Cart subcollection: User can manage their own cart items
+      // Cart: Only the user can access their own cart.
       match /cart/{cartItemId} {
         allow read, write, delete: if request.auth != null && request.auth.uid == userId;
       }
     }
 
-    // Orders: Authenticated users can create their own orders and read their own orders.
-    // Orders are generally not updatable or deletable by users once placed.
+    // Orders: Only the authenticated user can create orders for themselves.
+    // Users can only read their own orders. Admins can read all orders.
     match /orders/{orderId} {
       allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
-      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
-      allow update, delete: if false; 
+      allow read: if request.auth != null && (request.resource.data.userId == request.auth.uid || request.auth.token.isAdmin == true);
+      // Update/delete typically handled by backend/admin processes, not directly by users.
+      allow update, delete: if request.auth != null && request.auth.token.isAdmin == true;
     }
   }
 }

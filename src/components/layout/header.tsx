@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, LogIn, Loader2 } from 'lucide-react';
+import { ShoppingBag, User, LogOut, LogIn, Loader2, Shield } from 'lucide-react'; // Added Shield for Admin
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { CartIcon } from '@/components/cart/cart-icon';
@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 
 export default function Header() {
-  const { user, loading, logout } = useAuth();
+  const { user, isAdmin, loading, logout } = useAuth(); // Added isAdmin
 
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
@@ -31,7 +31,7 @@ export default function Header() {
           <SearchBar />
         </div>
 
-        <nav className="flex items-center space-x-2 sm:space-x-4">
+        <nav className="flex items-center space-x-1 sm:space-x-2">
           <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
             <Link href="/">Home</Link>
           </Button>
@@ -51,26 +51,43 @@ export default function Header() {
                   )}
                 </Button>
               </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuLabel>My Account</DropdownMenuLabel>
+              <DropdownMenuContent align="end" className="w-56">
+                <DropdownMenuLabel>
+                  <p className="font-medium">{user.displayName || "My Account"}</p>
+                  <p className="text-xs text-muted-foreground">{user.email}</p>
+                </DropdownMenuLabel>
                 <DropdownMenuSeparator />
                 <DropdownMenuItem asChild>
-                  <Link href="/profile">Profile</Link> 
+                  <Link href="/profile">
+                    <User className="mr-2 h-4 w-4" /> Profile
+                  </Link> 
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>
-                  <Link href="/orders">Orders</Link>
+                  <Link href="/orders">
+                    <ShoppingBag className="mr-2 h-4 w-4" /> Orders
+                  </Link>
                 </DropdownMenuItem>
+                {isAdmin && (
+                  <>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem asChild>
+                      <Link href="/admin">
+                        <Shield className="mr-2 h-4 w-4" /> Admin Panel
+                      </Link>
+                    </DropdownMenuItem>
+                  </>
+                )}
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout} className="cursor-pointer">
+                <DropdownMenuItem onClick={logout} className="cursor-pointer text-destructive focus:text-destructive focus:bg-destructive/10">
                   <LogOut className="mr-2 h-4 w-4" />
                   Logout
                 </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           ) : (
-            <Button variant="ghost" size="icon" asChild aria-label="Login">
+            <Button variant="ghost" size="sm" asChild aria-label="Login">
               <Link href="/login">
-                <LogIn className="h-5 w-5" />
+                <LogIn className="mr-1 h-4 w-4 sm:mr-2" /> <span className="hidden sm:inline">Login</span>
               </Link>
             </Button>
           )}
