@@ -1,86 +1,22 @@
-import type { Product } from './types';
 
-export const mockProducts: Product[] = [
-  {
-    id: '1',
-    name: 'Classic Leather Wallet',
-    description: 'A timeless bifold wallet crafted from genuine leather, offering ample space for cards and cash. Sleek and durable for everyday use.',
-    price: 49.99,
-    imageUrl: 'https://placehold.co/400x300.png',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    category: 'Accessories',
-    featured: true,
-    stock: 15,
-  },
-  {
-    id: '2',
-    name: 'Wireless Noise-Cancelling Headphones',
-    description: 'Immerse yourself in pure sound with these premium over-ear headphones. Features active noise-cancellation and long-lasting battery life.',
-    price: 199.99,
-    imageUrl: 'https://placehold.co/400x300.png',
-    images: ['https://placehold.co/600x400.png', 'https://placehold.co/600x400.png'],
-    category: 'Electronics',
-    featured: true,
-    stock: 8,
-  },
-  {
-    id: '3',
-    name: 'Modern Ceramic Vase',
-    description: 'Add a touch of elegance to your home decor with this minimalist ceramic vase. Perfect for fresh flowers or as a standalone piece.',
-    price: 34.50,
-    imageUrl: 'https://placehold.co/400x300.png',
-    category: 'Home Goods',
-    featured: true,
-    stock: 22,
-  },
-  {
-    id: '4',
-    name: 'Organic Cotton T-Shirt',
-    description: 'Comfortable and stylish, this t-shirt is made from 100% organic cotton. A versatile wardrobe staple available in various colors.',
-    price: 25.00,
-    imageUrl: 'https://placehold.co/400x300.png',
-    category: 'Apparel',
-    stock: 50,
-  },
-  {
-    id: '5',
-    name: 'Stainless Steel Water Bottle',
-    description: 'Stay hydrated on the go with this durable and eco-friendly water bottle. Keeps drinks cold for 24 hours or hot for 12 hours.',
-    price: 29.99,
-    imageUrl: 'https://placehold.co/400x300.png',
-    category: 'Outdoor',
-    featured: true,
-    stock: 30,
-  },
-  {
-    id: '6',
-    name: 'Smart Fitness Tracker',
-    description: 'Monitor your activity levels, heart rate, and sleep patterns with this sleek fitness tracker. Syncs with your smartphone for detailed insights.',
-    price: 79.95,
-    imageUrl: 'https://placehold.co/400x300.png',
-    category: 'Electronics',
-    stock: 12,
-  },
-   {
-    id: '7',
-    name: 'Gourmet Coffee Beans',
-    description: 'A rich and aromatic blend of premium Arabica coffee beans, ethically sourced and expertly roasted for the perfect cup.',
-    price: 18.99,
-    imageUrl: 'https://placehold.co/400x300.png',
-    category: 'Groceries',
-    stock: 40,
-  },
-  {
-    id: '8',
-    name: 'Yoga Mat with Carrying Strap',
-    description: 'High-density, non-slip yoga mat providing optimal comfort and support for your practice. Includes a convenient carrying strap.',
-    price: 42.00,
-    imageUrl: 'https://placehold.co/400x300.png',
-    category: 'Sports',
-    featured: true,
-    stock: 18,
-  }
-];
+// mockProducts are no longer used as data will be fetched from Firestore.
+// You need to populate your Firestore 'products' collection.
+// Example product structure (ensure 'id' is the Firestore document ID):
+// {
+//   id: 'unique-product-id',
+//   name: 'Classic Leather Wallet',
+//   name_lowercase: 'classic leather wallet', // For searching
+//   description: 'A timeless bifold wallet...',
+//   price: 49.99,
+//   imageUrl: 'https://placehold.co/400x300.png',
+//   images: ['https://placehold.co/600x400.png'],
+//   category: 'Accessories',
+//   featured: true,
+//   stock: 15,
+// }
 
-// Add data-ai-hint to image URLs in the data itself for easier management if needed,
-// or apply it dynamically when rendering Image components. For now, will apply dynamically.
+// This file can be removed or repurposed for other static data if needed.
+// For now, it's kept to avoid breaking imports if it was used elsewhere for non-product data,
+// but its primary purpose (mockProducts) is gone.
+
+export {}; // Add an empty export to make it a module if it's empty.

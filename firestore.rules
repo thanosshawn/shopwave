@@ -1,0 +1,35 @@
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Products: Publicly readable. 
+    // Write access is restricted (e.g., for admins or a backend service).
+    // For easier prototyping, you might temporarily set write to `if request.auth != null;`
+    // if you plan to add products via client-side scripts during development.
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if false; // Or use a more specific admin check like:
+                             // request.auth != null && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // User-specific data
+    match /users/{userId} {
+      // User can read and write their own profile document
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+
+      // Cart subcollection: User can manage their own cart items
+      match /cart/{cartItemId} {
+        allow read, write, delete: if request.auth != null && request.auth.uid == userId;
+      }
+    }
+
+    // Orders: Authenticated users can create their own orders and read their own orders.
+    // Orders are generally not updatable or deletable by users once placed.
+    match /orders/{orderId} {
+      allow create: if request.auth != null && request.resource.data.userId == request.auth.uid;
+      allow read: if request.auth != null && resource.data.userId == request.auth.uid;
+      allow update, delete: if false; 
+    }
+  }
+}

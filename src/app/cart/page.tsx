@@ -1,3 +1,4 @@
+
 "use client";
 
 import Image from 'next/image';
@@ -5,23 +6,31 @@ import Link from 'next/link';
 import { useCart } from '@/hooks/use-cart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Minus, Plus, Trash2, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingCart, ArrowLeft, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
-  const { cartItems, removeFromCart, updateQuantity, getCartTotal, getCartItemCount } = useCart();
+  const { cartItems, removeFromCart, updateQuantity, getCartTotal, getCartItemCount, loadingCart } = useCart();
   const router = useRouter();
 
-  const handleQuantityChange = (productId: string, currentQuantity: number, amount: number) => {
+  const handleQuantityChange = async (productId: string, currentQuantity: number, amount: number) => {
     const newQuantity = currentQuantity + amount;
     if (newQuantity > 0) {
-      updateQuantity(productId, newQuantity);
+      await updateQuantity(productId, newQuantity);
     } else {
-      removeFromCart(productId);
+      await removeFromCart(productId);
     }
   };
+
+  if (loadingCart) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   if (cartItems.length === 0) {
     return (
