@@ -8,10 +8,12 @@ import { useRouter } from 'next/navigation';
 import { useEffect } from 'react';
 import { Loader2, Shield, LayoutDashboard, Package, Users, Settings } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useToast } from '@/hooks/use-toast'; // Import useToast
 
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const { user, isAdmin, loading } = useAuth();
   const router = useRouter();
+  const { toast } = useToast(); // Get toast function from the hook
 
   useEffect(() => {
     if (!loading) {
@@ -27,7 +29,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
         router.replace('/'); 
       }
     }
-  }, [user, isAdmin, loading, router]);
+  }, [user, isAdmin, loading, router, toast]); // Add toast to dependency array
 
   if (loading || !user || (user && !isAdmin && !loading) ) {
     // Show loader while checking auth or if user is not an admin (before redirect kicks in)
@@ -38,18 +40,7 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
       </div>
     );
   }
-  // Toast definition (assuming useToast is available globally or via a context not shown here)
-  // For demonstration, we'll assume a global toast function or one provided by a higher-level context.
-  // In a real app, you'd import `useToast` from "@/hooks/use-toast" if it's set up.
-  const toast = (options: { title: string, description: string, variant?: "default" | "destructive" }) => {
-    // This is a placeholder. Replace with your actual toast implementation.
-    console.log(`Toast: ${options.title} - ${options.description} (${options.variant})`);
-    if (typeof window !== 'undefined' && window.alert) {
-      window.alert(`${options.title}: ${options.description}`);
-    }
-  };
-
-
+  
   return (
     <div className="flex min-h-screen bg-muted/40">
       <aside className="w-64 bg-background border-r p-4 flex flex-col gap-4">
