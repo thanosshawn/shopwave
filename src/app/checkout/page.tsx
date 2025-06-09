@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useForm } from 'react-hook-form';
@@ -5,17 +6,18 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { Label } from '@/components/ui/label'; // Keep if used outside form, otherwise FormLabel is preferred
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { useCart } from '@/hooks/use-cart';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation'; // useSearchParams for redirect
 import { useToast } from '@/hooks/use-toast';
 import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, Suspense } from 'react';
 import Link from 'next/link';
-import Image from 'next/image'; // Added this line
-import { ArrowLeft, CreditCard, Lock, ShoppingBag } from 'lucide-react';
+import Image from 'next/image';
+import { ArrowLeft, CreditCard, Lock, ShoppingBag, Loader2 } from 'lucide-react';
+import { useAuth } from '@/hooks/use-auth';
 
 const shippingSchema = z.object({
   fullName: z.string().min(2, "Full name is required"),
@@ -36,24 +38,32 @@ const paymentSchema = z.object({
 type ShippingFormData = z.infer<typeof shippingSchema>;
 type PaymentFormData = z.infer<typeof paymentSchema>;
 
-export default function CheckoutPage() {
-  const { cartItems, getCartTotal, clearCart, getCartItemCount } = useCart();
+function CheckoutPageContent() {
+  const { cartItems, getCartTotal, clearCart } = useCart();
   const router = useRouter();
   const { toast } = useToast();
+  const { user, loading: authLoading } = useAuth();
   const [isClient, setIsClient] = useState(false);
 
   useEffect(() => {
     setIsClient(true);
-    if (cartItems.length === 0 && typeof window !== 'undefined') { // Check cartItems on client
-      router.replace('/cart');
-      toast({ title: "Your cart is empty", description: "Please add items to your cart before checkout." });
+  }, []);
+
+  useEffect(() => {
+    if (isClient && !authLoading) {
+      if (!user) {
+        toast({ title: "Authentication Required", description: "Please log in to proceed to checkout.", variant: "default" });
+        router.replace('/login?redirect=/checkout');
+      } else if (cartItems.length === 0) {
+        router.replace('/cart');
+        toast({ title: "Your cart is empty", description: "Please add items to your cart before checkout." });
+      }
     }
-  }, [cartItems, router, toast]);
-
-
+  }, [isClient, user, authLoading, cartItems, router, toast]);
+  
   const shippingForm = useForm<ShippingFormData>({
     resolver: zodResolver(shippingSchema),
-    defaultValues: { fullName: '', address: '', city: '', postalCode: '', country: '', email: '' },
+    defaultValues: { fullName: '', address: '', city: '', postalCode: '', country: '', email: user?.email || '' },
   });
 
   const paymentForm = useForm<PaymentFormData>({
@@ -61,8 +71,35 @@ export default function CheckoutPage() {
     defaultValues: { cardNumber: '', expiryDate: '', cvv: '' },
   });
 
-  const handlePlaceOrder = () => {
-    // Mock order placement
+  // Populate email from user if available
+   useEffect(() => {
+    if (user?.email && !shippingForm.getValues('email')) {
+      shippingForm.setValue('email', user.email);
+    }
+    if (user?.displayName && !shippingForm.getValues('fullName')) {
+       shippingForm.setValue('fullName', user.displayName);
+    }
+  }, [user, shippingForm]);
+
+
+  const handlePlaceOrder = async () => {
+    // Trigger both forms validation
+    const isShippingValid = await shippingForm.trigger();
+    const isPaymentValid = await paymentForm.trigger();
+
+    if (!isShippingValid) {
+      toast({title: "Shipping Info Incomplete", description:"Please fill all required shipping fields.", variant: "destructive"});
+      return;
+    }
+    if (!isPaymentValid) {
+      toast({title: "Payment Info Incomplete", description:"Please fill all required payment fields.", variant: "destructive"});
+      return;
+    }
+
+    // All forms are valid, proceed with order
+    console.log("Shipping Data:", shippingForm.getValues());
+    console.log("Payment Data:", paymentForm.getValues());
+    
     toast({
       title: "Order Placed!",
       description: "Thank you for your purchase. Your order is being processed.",
@@ -72,30 +109,31 @@ export default function CheckoutPage() {
     router.push('/'); 
   };
 
-  const onShippingSubmit = (data: ShippingFormData) => {
-    console.log("Shipping Data:", data);
-    // Proceed to payment step or integrate with backend
-    // For now, just log and assume payment step is next
-    toast({ title: "Shipping details saved", description: "Please proceed to payment."});
-  };
-  
-  const onPaymentSubmit = (data: PaymentFormData) => {
-    console.log("Payment Data:", data);
-    handlePlaceOrder();
-  };
 
-  if (!isClient || cartItems.length === 0) {
+  if (authLoading || !isClient) {
      return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-200px)]">
+        <Loader2 className="h-12 w-12 animate-spin text-primary" />
+      </div>
+    );
+  }
+  
+  if (!user || cartItems.length === 0) {
+    // This case should ideally be handled by the useEffect redirect,
+    // but as a fallback or during brief state transitions:
+    return (
       <div className="text-center py-12">
         <ShoppingBag className="mx-auto h-24 w-24 text-muted-foreground mb-6" />
-        <h1 className="text-3xl font-headline font-bold mb-4">Your Cart is Empty</h1>
-        <p className="text-muted-foreground mb-8">Redirecting to cart...</p>
-        <Button asChild size="lg" variant="outline">
-          <Link href="/cart">Go to Cart</Link>
+        <h1 className="text-3xl font-headline font-bold mb-4">Verifying Information...</h1>
+        <p className="text-muted-foreground mb-8">Please wait or ensure you are logged in and have items in your cart.</p>
+         <Loader2 className="mx-auto h-8 w-8 animate-spin text-primary mb-6" />
+        <Button asChild size="lg" variant="outline" onClick={() => router.push(user ? '/cart' : '/login?redirect=/checkout')}>
+          {user ? 'Go to Cart' : 'Login'}
         </Button>
       </div>
     );
   }
+
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -106,14 +144,13 @@ export default function CheckoutPage() {
 
       <div className="grid md:grid-cols-3 gap-8">
         <div className="md:col-span-2 space-y-8">
-          {/* Shipping Information Form */}
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-2xl font-headline">Shipping Information</CardTitle>
             </CardHeader>
             <CardContent>
               <Form {...shippingForm}>
-                <form onSubmit={shippingForm.handleSubmit(onShippingSubmit)} className="space-y-6">
+                <form className="space-y-6"> {/* No onSubmit here, handled by main button */}
                   <FormField
                     control={shippingForm.control}
                     name="fullName"
@@ -194,13 +231,11 @@ export default function CheckoutPage() {
                       </FormItem>
                     )}
                   />
-                   {/* <Button type="submit">Save Shipping Info</Button> */}
                 </form>
               </Form>
             </CardContent>
           </Card>
 
-          {/* Payment Information Form (Mocked) */}
           <Card className="shadow-lg">
             <CardHeader>
               <CardTitle className="text-2xl font-headline flex items-center">
@@ -209,7 +244,7 @@ export default function CheckoutPage() {
             </CardHeader>
             <CardContent>
               <Form {...paymentForm}>
-                <form onSubmit={paymentForm.handleSubmit(onPaymentSubmit)} className="space-y-6">
+                <form className="space-y-6"> {/* No onSubmit here */}
                   <FormField
                     control={paymentForm.control}
                     name="cardNumber"
@@ -251,14 +286,12 @@ export default function CheckoutPage() {
                       )}
                     />
                   </div>
-                  {/* <Button type="submit" className="w-full">Complete Payment & Place Order</Button> */}
                 </form>
               </Form>
             </CardContent>
           </Card>
         </div>
 
-        {/* Order Summary */}
         <div className="md:col-span-1">
           <Card className="shadow-lg sticky top-24">
             <CardHeader>
@@ -295,26 +328,7 @@ export default function CheckoutPage() {
               <Button 
                 size="lg" 
                 className="w-full" 
-                onClick={() => {
-                  // Trigger both forms validation before final submission logic
-                  shippingForm.handleSubmit(onShippingSubmit)();
-                  paymentForm.handleSubmit(onPaymentSubmit)();
-                  // If both forms are valid, then proceed.
-                  // The current setup calls onPaymentSubmit which then calls handlePlaceOrder.
-                  // For simplicity, if either form has errors, it won't proceed to handlePlaceOrder from onPaymentSubmit.
-                  // A more robust solution would check shippingForm.formState.isValid and paymentForm.formState.isValid here.
-                  if (shippingForm.formState.isValid && paymentForm.formState.isValid) {
-                    // onPaymentSubmit will be called again by this button, this is slightly redundant
-                    // but given the structure, it's the simplest way to ensure both forms are submitted.
-                    // A better way would be a single submit button that handles both form validations.
-                  } else {
-                     if (!shippingForm.formState.isValid) {
-                        toast({title: "Shipping Info Incomplete", description:"Please fill all required shipping fields.", variant: "destructive"});
-                     } else if (!paymentForm.formState.isValid) {
-                        toast({title: "Payment Info Incomplete", description:"Please fill all required payment fields.", variant: "destructive"});
-                     }
-                  }
-                }}
+                onClick={handlePlaceOrder}
               >
                 <Lock className="mr-2 h-5 w-5" /> Place Order
               </Button>
@@ -326,5 +340,15 @@ export default function CheckoutPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function CheckoutPage() {
+  // Suspense is required by Next.js when using useSearchParams in a page component
+  // or a component rendered by it.
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-[calc(100vh-200px)]"><Loader2 className="h-12 w-12 animate-spin text-primary" /></div>}>
+      <CheckoutPageContent />
+    </Suspense>
   );
 }
