@@ -29,7 +29,7 @@ import {
 import type { Product } from "@/lib/types"
 import { deleteProduct } from "@/lib/firebase/services"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
+import { useRouter } from "next/navigation" // Import useRouter
 
 const ProductImageCell = ({ row }: { row: any }) => {
   const imageUrl = row.getValue("imageUrl") as string;
@@ -48,9 +48,7 @@ const ProductImageCell = ({ row }: { row: any }) => {
 };
 
 
-export const getProductColumns = (
-  refreshProducts: () => void // Callback to refresh data after deletion
-): ColumnDef<Product>[] => {
+export const getProductColumns = (): ColumnDef<Product>[] => {
   // eslint-disable-next-line react-hooks/rules-of-hooks
   const { toast } = useToast();
   // eslint-disable-next-line react-hooks/rules-of-hooks
@@ -64,7 +62,7 @@ export const getProductColumns = (
         title: "Product Deleted",
         description: `"${productName}" has been successfully deleted.`,
       });
-      refreshProducts(); // Refresh the table data
+      router.refresh(); // Use router.refresh() here
     } catch (error) {
       console.error("Error deleting product:", error);
       toast({
@@ -202,3 +200,4 @@ export const getProductColumns = (
     },
   ];
 };
+
