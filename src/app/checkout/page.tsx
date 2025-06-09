@@ -14,6 +14,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardFooter } from '@/componen
 import { Separator } from '@/components/ui/separator';
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image'; // Added this line
 import { ArrowLeft, CreditCard, Lock, ShoppingBag } from 'lucide-react';
 
 const shippingSchema = z.object({
