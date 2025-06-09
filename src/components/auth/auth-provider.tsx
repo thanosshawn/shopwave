@@ -13,10 +13,14 @@ import type { AuthContextType } from '@/lib/types';
 
 export const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+// !!! IMPORTANT: Change this to your desired admin email address !!!
+// For better security in a real application, this should come from an environment variable.
+const ADMIN_EMAIL = "admin@example.com";
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
-  const [loading, setLoading] = useState(true); // Start with loading true
+  const [loading, setLoading] = useState(true); 
   const { toast } = useToast();
   const router = useRouter();
 
@@ -24,28 +28,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       console.log('[AuthProvider] onAuthStateChanged triggered. currentUser UID:', currentUser?.uid || 'No user');
       setUser(currentUser);
+
       if (currentUser) {
-        try {
-          const idTokenResult = await getIdTokenResult(currentUser);
-          console.log('[AuthProvider] User claims:', idTokenResult.claims);
-          setIsAdmin(idTokenResult.claims.isAdmin === true);
-        } catch (error) {
-          console.error("[AuthProvider] Error getting ID token result:", error);
+        console.log(`[AuthProvider] Current user email: ${currentUser.email}`);
+        if (currentUser.email === ADMIN_EMAIL) {
+          console.log('[AuthProvider] User is admin based on email match with:', ADMIN_EMAIL);
+          setIsAdmin(true);
+        } else {
+          console.log('[AuthProvider] User is NOT admin. Email mismatch. User email:', currentUser.email, 'Required admin email:', ADMIN_EMAIL);
           setIsAdmin(false);
         }
       } else {
+        console.log('[AuthProvider] No current user, setting isAdmin to false.');
         setIsAdmin(false);
       }
-      console.log('[AuthProvider] Setting loading to false. User:', currentUser?.uid, 'IsAdmin:', isAdmin);
+      
+      console.log('[AuthProvider] Setting loading to false. User:', currentUser?.uid, 'IsAdmin:', isAdmin); // Note: isAdmin here might log the value from the previous render cycle due to closure. The setIsAdmin call above is what matters for the next render.
       setLoading(false);
     });
     return () => unsubscribe();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, []); // isAdmin removed from deps as it's set within this effect
 
   const logout = async () => {
     setLoading(true);
-    setIsAdmin(false);
+    setIsAdmin(false); // Reset admin status on logout
     try {
       await firebaseSignOut(auth);
       toast({ title: 'Logged Out', description: 'You have been successfully logged out.' });
@@ -58,7 +65,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  // If loading, show a consistent skeleton on both server and client
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen">
