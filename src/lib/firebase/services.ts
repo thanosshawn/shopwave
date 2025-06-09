@@ -15,6 +15,7 @@ import {
   writeBatch,
   serverTimestamp,
   addDoc,
+  type QueryConstraint,
 } from 'firebase/firestore';
 import { updateProfile as updateFirebaseUserProfile } from 'firebase/auth';
 import type { User as FirebaseUser } from 'firebase/auth';
@@ -22,28 +23,31 @@ import { db, auth } from './config';
 import type { Product, CartItem, UserProfile, Order } from '@/lib/types';
 
 // Product Services
-export async function getProducts(filters?: { featured?: boolean; category?: string }, count?: number): Promise<Product[]> {
+export async function getProducts(filters?: { featured?: boolean; category?: string; condition?: 'new' | 'used' }, count?: number): Promise<Product[]> {
   const productsCol = collection(db, 'products');
-  let q = query(productsCol); 
+  const conditions: QueryConstraint[] = [];
 
-  const conditions = [];
   if (filters?.featured !== undefined) {
     conditions.push(where('featured', '==', filters.featured));
   }
   if (filters?.category) {
     conditions.push(where('category', '==', filters.category));
   }
-  
-  // Apply orderBy name after all filters
-  // Note: If you filter by inequality on one field and order by another, you might need a composite index.
-  // For simplicity, we'll order by name. If `featured` is used, this query may require an index on `featured` and `name`.
-  q = query(productsCol, ...conditions, orderBy('name'));
-
-
-  if (count) {
-    q = query(q, limit(count));
+  if (filters?.condition) {
+    conditions.push(where('condition', '==', filters.condition));
   }
   
+  // Apply orderBy name after all filters
+  // Note: Queries with multiple filters and an orderBy on a different field require composite indexes.
+  // e.g., if filtering by 'featured' and 'condition', and ordering by 'name', an index for (featured, condition, name) might be needed.
+  // If filtering by 'condition' and ordering by 'name', an index for (condition, name) is needed.
+  conditions.push(orderBy('name'));
+
+  if (count) {
+    conditions.push(limit(count));
+  }
+  
+  const q = query(productsCol, ...conditions);
   const productSnapshot = await getDocs(q);
   return productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }
@@ -62,6 +66,7 @@ export async function createProduct(productData: Omit<Product, 'id' | 'name_lowe
   const parsedImages = productData.images ? productData.images.split(',').map(url => url.trim()).filter(url => url) : [];
   const newProductRef = await addDoc(productsCol, {
     ...productData,
+    condition: productData.condition || 'new', // Default to 'new'
     images: parsedImages,
     name_lowercase: productData.name.toLowerCase(),
     createdAt: serverTimestamp(), 
@@ -81,9 +86,15 @@ export async function updateProduct(productId: string, productData: Partial<Omit
   }
   if (productData.images && typeof productData.images === 'string') {
     updateData.images = productData.images.split(',').map(url => url.trim()).filter(url => url);
-  } else if (productData.images === undefined) { // Handle explicitly clearing images
+  } else if (productData.images === undefined && Object.prototype.hasOwnProperty.call(productData, 'images') ) { 
+    // if 'images' key is present but undefined (e.g. empty string from form), clear images
     updateData.images = [];
   }
+  // Ensure condition is explicitly set if provided, otherwise it remains unchanged by default from productData
+  if (productData.condition) {
+    updateData.condition = productData.condition;
+  }
+
 
   await updateDoc(productDocRef, updateData);
 }
@@ -209,7 +220,8 @@ export async function getUserOrders(userId: string): Promise<Order[]> {
 // Admin - Product Management (specific example)
 export async function getAllProductsAdmin(): Promise<Product[]> {
   const productsCol = collection(db, 'products');
-  const q = query(productsCol, orderBy('name'));
+  // Default ordering by name, can be extended if admin table needs other sorting
+  const q = query(productsCol, orderBy('name')); 
   const productSnapshot = await getDocs(q);
   return productSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
 }

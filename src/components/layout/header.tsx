@@ -2,7 +2,7 @@
 "use client";
 
 import Link from 'next/link';
-import { ShoppingBag, User, LogOut, LogIn, Loader2, Shield } from 'lucide-react'; // Added Shield for Admin
+import { ShoppingBag, User, LogOut, LogIn, Loader2, Shield, Store } from 'lucide-react'; // Added Store for Used Products
 import { Button } from '@/components/ui/button';
 import { SearchBar } from '@/components/ui/search-bar';
 import { CartIcon } from '@/components/cart/cart-icon';
@@ -34,6 +34,9 @@ export default function Header() {
         <nav className="flex items-center space-x-1 sm:space-x-2">
           <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
             <Link href="/">Home</Link>
+          </Button>
+          <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
+            <Link href="/used-products">Used Products</Link>
           </Button>
           <CartIcon />
           {loading ? (
@@ -93,8 +96,11 @@ export default function Header() {
           )}
         </nav>
       </div>
-      <div className="md:hidden p-4 border-t">
+      <div className="md:hidden p-4 border-t flex items-center justify-between">
         <SearchBar />
+         <Button variant="ghost" size="sm" asChild className="sm:hidden">
+            <Link href="/used-products"><Store className="mr-2 h-4 w-4" /> Used</Link>
+          </Button>
       </div>
     </header>
   );

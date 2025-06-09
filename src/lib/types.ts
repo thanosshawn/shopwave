@@ -12,6 +12,7 @@ export interface Product {
   category: string;
   featured?: boolean;
   stock?: number;
+  condition?: 'new' | 'used'; // Added condition field
 }
 
 export interface CartItem {

@@ -17,6 +17,13 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import type { Product } from "@/lib/types";
@@ -44,6 +51,7 @@ const productFormSchema = z.object({
   category: z.string().min(2, "Category is required"),
   featured: z.boolean().default(false).optional(),
   stock: z.coerce.number().int().min(0, "Stock cannot be negative").default(0),
+  condition: z.enum(['new', 'used']).default('new').optional(),
 });
 
 export type ProductFormData = z.infer<typeof productFormSchema>;
@@ -61,6 +69,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   const defaultValues = initialData ? {
     ...initialData,
     images: initialData.images?.join(', ') || '', // Convert array to comma-separated string
+    condition: initialData.condition || 'new',
   } : {
     name: "",
     description: "",
@@ -70,6 +79,7 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
     category: "",
     featured: false,
     stock: 0,
+    condition: 'new' as 'new' | 'used',
   };
 
   const form = useForm<ProductFormData>({
@@ -80,11 +90,15 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
   async function onSubmit(data: ProductFormData) {
     setIsSaving(true);
     try {
+      const productPayload = {
+        ...data,
+        condition: data.condition || 'new', // Ensure condition has a default
+      };
       if (productId && initialData) { // Editing existing product
-        await updateProduct(productId, data);
+        await updateProduct(productId, productPayload);
         toast({ title: "Product Updated", description: `"${data.name}" has been successfully updated.` });
       } else { // Creating new product
-        await createProduct(data);
+        await createProduct(productPayload);
         toast({ title: "Product Created", description: `"${data.name}" has been successfully created.` });
       }
       router.push("/admin/products"); // Redirect to products list
@@ -157,6 +171,27 @@ export function ProductForm({ initialData, productId }: ProductFormProps) {
             <FormItem>
               <FormLabel>Category</FormLabel>
               <FormControl><Input placeholder="e.g., Accessories, Electronics" {...field} /></FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="condition"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Condition</FormLabel>
+              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select product condition" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="new">New</SelectItem>
+                  <SelectItem value="used">Used</SelectItem>
+                </SelectContent>
+              </Select>
               <FormMessage />
             </FormItem>
           )}
